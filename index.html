@@ -485,6 +485,15 @@ async function vGen(m){
       <div style="flex:1"><label>场景</label><select id="gScene">
         <option value="both">两个都要</option><option value="day">只当天</option>
         <option value="eve">只提前一天</option></select></div></div>
+    <div class="row" style="margin-top:6px">
+      <label style="display:flex;align-items:center;gap:8px;font-size:14px;color:var(--txt)">
+        <input type="checkbox" id="gClean" style="width:18px;height:18px">
+        先清空该年份已产出的文件再生成
+      </label></div>
+    <div class="hint" style="margin-bottom:10px">
+      <b>什么时候勾</b>：换了文案规则、换了配图开关（如关闭地域元素）、
+      或旧产物只有 day 没有 eve 时。<br>
+      <b>不勾</b>的话，已存在的文件会跳过、不重做 —— 所以想全换必须勾。</div>
     <div class="row"><button onclick="runGen()">开始生成</button></div>
     <div class="hint">52 人 × 2 场景约 20～40 分钟。跑完点下面的「刷新」看状态，
       或去 Actions 页面看日志、下载贺卡。</div></div>
@@ -509,11 +518,13 @@ async function paintRuns(rs){
 }
 async function runGen(){
   const y=document.getElementById('gYear').value,sc=document.getElementById('gScene').value;
-  await dispatch('daily.yml',{mode:'generate',year:y,scene:sc,target:''});
-  toast('已启动 '+y+' 年生成，约 20-40 分钟');setTimeout(render,1500);
+  const cl=document.getElementById('gClean')?.checked?'true':'false';
+  await dispatch('daily.yml',{mode:'generate',year:y,scene:sc,target:'',clean:cl});
+  toast(cl==='true'?('已清空并重生成 '+y+' 年'):('已启动 '+y+' 年生成'))
+  setTimeout(render,1500);
 }
 async function runRaw(mode){
-  await dispatch('daily.yml',{mode,scene:'both',year:'',target:''});
+  await dispatch('daily.yml',{mode,scene:'both',year:'',target:'',clean:'false'});
   toast('已启动：'+mode);setTimeout(render,1500);
 }
 
