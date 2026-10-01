@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>班级生日祝福 · 管理后台</title>
+<style>
+:root{--bg:#0f1115;--panel:#171a21;--panel2:#1e222b;--line:#2a2f3a;
+--txt:#e6e8ec;--dim:#9aa3b2;--acc:#4f8cff;--ok:#3ecf8e;--warn:#ffb454;--err:#ff6b6b}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);
+font:15px/1.6 -apple-system,"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
+a{color:var(--acc)}
+header{position:sticky;top:0;z-index:20;background:var(--panel);
+border-bottom:1px solid var(--line);padding:10px 14px;
+display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+header h1{font-size:16px;margin:0;font-weight:600}
+header .sp{flex:1}
+.tag{font-size:12px;color:var(--dim);background:var(--panel2);
+border:1px solid var(--line);border-radius:999px;padding:3px 10px}
+main{padding:14px;max-width:1100px;margin:0 auto}
+nav{display:flex;gap:6px;overflow-x:auto;padding:0 14px 0;background:var(--panel)}
+nav button{background:none;border:none;color:var(--dim);padding:10px 14px;
+font-size:14px;border-bottom:2px solid transparent;cursor:pointer;white-space:nowrap}
+nav button.on{color:var(--txt);border-bottom-color:var(--acc)}
+.card{background:var(--panel);border:1px solid var(--line);
+border-radius:12px;padding:14px;margin-bottom:14px}
+.card h2{margin:0 0 10px;font-size:15px;font-weight:600}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+label{font-size:13px;color:var(--dim);display:block;margin-bottom:4px}
+input,select,textarea,button{font-family:inherit;font-size:14px}
+input[type=text],input[type=password],input[type=number],select,textarea{
+background:var(--panel2);border:1px solid var(--line);color:var(--txt);
+border-radius:8px;padding:9px 11px;width:100%}
+textarea{min-height:90px;resize:vertical;line-height:1.7}
+button{background:var(--acc);border:none;color:#fff;border-radius:8px;
+padding:9px 16px;cursor:pointer;font-weight:500}
+button:disabled{opacity:.5;cursor:not-allowed}
+button.gh{background:var(--panel2);border:1px solid var(--line);color:var(--txt)}
+button.danger{background:var(--err)}
+button.sm{padding:6px 11px;font-size:13px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px}
+.thumb{background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+overflow:hidden;cursor:pointer;position:relative;aspect-ratio:9/16}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .lb{position:absolute;left:0;right:0;bottom:0;padding:5px 7px;
+font-size:12px;background:linear-gradient(transparent,rgba(0,0,0,.75));
+color:#fff;display:flex;justify-content:space-between}
+.thumb .ph{display:flex;height:100%;align-items:center;justify-content:center;
+color:var(--dim);font-size:12px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:left}
+th{color:var(--dim);font-weight:500;font-size:12px}
+td input{padding:6px 8px}
+.mask{position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:50;
+display:flex;align-items:center;justify-content:center;padding:14px}
+.mask .box{background:var(--panel);border:1px solid var(--line);
+border-radius:14px;max-width:520px;width:100%;max-height:92vh;overflow:auto;padding:18px}
+.mask .box img{width:100%;border-radius:10px;display:block;margin-bottom:12px}
+.close{float:right;background:none;color:var(--dim);font-size:22px;padding:0 4px}
+.hint{font-size:12px;color:var(--dim);margin-top:6px}
+.err{color:var(--err);font-size:13px}
+.ok{color:var(--ok);font-size:13px}
+.switch{display:flex;align-items:center;gap:9px;padding:9px 0;
+border-bottom:1px solid var(--line)}
+.switch:last-child{border:none}
+.switch .t{flex:1;font-size:14px}
+.switch .d{font-size:12px;color:var(--dim)}
+.toggle{width:46px;height:26px;border-radius:999px;background:var(--line);
+position:relative;cursor:pointer;flex:none;transition:.2s}
+.toggle.on{background:var(--ok)}
+.toggle i{position:absolute;top:3px;left:3px;width:20px;height:20px;
+border-radius:50%;background:#fff;transition:.2s}
+.toggle.on i{left:23px}
+.run{display:flex;justify-content:space-between;padding:8px 0;
+border-bottom:1px solid var(--line);font-size:13px}
+.run:last-child{border:none}
+.stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px}
+.stat div{background:var(--panel2);border:1px solid var(--line);
+border-radius:10px;padding:12px;text-align:center}
+.stat b{display:block;font-size:22px;font-weight:600}
+.stat span{font-size:12px;color:var(--dim)}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);
+background:var(--panel2);border:1px solid var(--line);border-radius:10px;
+padding:11px 18px;z-index:99;font-size:14px;display:none;max-width:90vw}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎂 班级生日祝福</h1>
+  <span class="tag" id="repoTag">未连接</span>
+  <span class="sp"></span>
+  <button class="gh sm" id="btnRefresh">刷新</button>
+  <button class="gh sm" id="btnLogout">退出</button>
+</header>
+
+<nav>
+  <button data-tab="home" class="on">概览</button>
+  <button data-tab="roster">名单</button>
+  <button data-tab="cards">贺卡</button>
+  <button data-tab="settings">设置</button>
+  <button data-tab="gen">生成</button>
+  <button data-tab="help">说明</button>
+</nav>
+
+<main id="main"></main>
+
+<div class="mask" id="login">
+  <div class="box">
+    <h2 style="margin:0 0 6px">登录管理后台</h2>
+    <p class="hint" style="margin-top:0">
+      用 GitHub 账号授权。需要一个 <b>Personal Access Token</b>：
+      GitHub 网页 → 右上角头像 → <b>Settings</b> → 最下方
+      <b>Developer settings</b> → <b>Personal access tokens → Fine-grained tokens</b>
+      → <b>Generate new token</b> → 只选你这一个仓库 →
+      Permissions 里把 <b>Contents</b> 和 <b>Actions</b> 设为 <b>Read and write</b>。
+    </p>
+    <div style="margin-top:14px">
+      <label>Token（github_pat_ 开头）</label>
+      <input type="password" id="tk" placeholder="粘贴后只保存在本机浏览器">
+    </div>
+    <div class="row" style="margin-top:10px">
+      <div style="flex:1"><label>用户名</label><input type="text" id="owner" placeholder="fcy2025"></div>
+      <div style="flex:1"><label>仓库名</label><input type="text" id="repo" value="qq-birthday-bot"></div>
+    </div>
+    <div><label>分支</label><input type="text" id="branch" value="master"></div>
+    <div class="row" style="margin-top:14px">
+      <button id="btnLogin">连接</button>
+      <button class="gh" id="btnGuess">自动填用户名</button>
+    </div>
+    <p class="hint">Token 只存在这台设备的浏览器里，不会上传给任何人。</p>
+  </div>
+</div>
+
+<div class="mask" id="modal" style="display:none">
+  <div class="box" id="modalBox"></div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const API='https://api.github.com';
+let S={tk:'',owner:'',repo:'',branch:'master'};
+let CACHE={};
+
+/* ---------- 基础 ---------- */
+function toast(m){const t=document.getElementById('toast');t.textContent=m;
+  t.style.display='block';clearTimeout(t._);t._=setTimeout(()=>t.style.display='none',2600);}
+function save(){localStorage.setItem('bday_admin',JSON.stringify(S));}
+function load(){try{Object.assign(S,JSON.parse(localStorage.getItem('bday_admin')||'{}'))}catch(e){}}
+function b64enc(str){const b=new TextEncoder().encode(str);let s='';
+  for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s);}
+function b64dec(b64){const bin=atob(b64.replace(/\n/g,''));const b=new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++)b[i]=bin.charCodeAt(i);return new TextDecoder().decode(b);}
+
+async function gh(path,opt={}){
+  const r=await fetch(API+path,{...opt,headers:{
+    Authorization:'Bearer '+S.tk,Accept:'application/vnd.github+json',
+    'X-GitHub-Api-Version':'2022-11-28',...(opt.headers||{})}});
+  if(!r.ok){let m=r.status+' ';try{m+=(await r.json()).message}catch(e){m+=await r.text()}
+    throw new Error(m);}
+  return r.status===204?null:r.json();
+}
+const P=p=>encodeURIComponent(p).replace(/%2F/g,'/');
+async function getFile(path){
+  const d=await gh(`/repos/${S.owner}/${S.repo}/contents/${P(path)}?ref=${S.branch}`);
+  if(Array.isArray(d))throw new Error('这是目录不是文件');
+  return {text:b64dec(d.content),sha:d.sha};
+}
+async function putFile(path,text,msg){
+  let sha;try{sha=(await getFile(path)).sha}catch(e){}
+  return gh(`/repos/${S.owner}/${S.repo}/contents/${P(path)}`,{method:'PUT',
+    body:JSON.stringify({message:msg,content:b64enc(text),sha,branch:S.branch})});
+}
+async function delFile(path){
+  const {sha}=await getFile(path);
+  return gh(`/repos/${S.owner}/${S.repo}/contents/${P(path)}`,{method:'DELETE',
+    body:JSON.stringify({message:'删除 '+path,sha,branch:S.branch})});
+}
+async function listDir(path){
+  try{return await gh(`/repos/${S.owner}/${S.repo}/contents/${P(path)}?ref=${S.branch}`)}
+  catch(e){return []}
+}
+async function dispatch(wf,inputs){
+  return gh(`/repos/${S.owner}/${S.repo}/actions/workflows/${wf}/dispatches`,
+    {method:'POST',body:JSON.stringify({ref:S.branch,inputs})});
+}
+async function runs(){
+  try{const d=await gh(`/repos/${S.owner}/${S.repo}/actions/runs?per_page=8`);
+    return d.workflow_runs||[]}catch(e){return[]}
+}
+
+/* ---------- 配置读写 ---------- */
+let cfgText='';
+async function getCfg(){if(!cfgText)cfgText=(await getFile('config.yaml')).text;return cfgText}
+function cfgGet(key){
+  const m=cfgText.match(new RegExp('^\\s*'+key+'\\s*:\\s*(.+)$','m'));
+  return m?m[1].trim():'';
+}
+function cfgSet(key,val){
+  const re=new RegExp('^(\\s*'+key+'\\s*:\\s*)(.+)$','m');
+  if(re.test(cfgText))cfgText=cfgText.replace(re,'$1'+val);
+  return cfgText;
+}
+async function saveCfg(msg){
+  await putFile('config.yaml',cfgText,'更新配置：'+msg);
+  toast('配置已保存 ✓');
+}
+
+/* ---------- 标签页 ---------- */
+let TAB='home';
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{
+  TAB=b.dataset.tab;document.querySelectorAll('nav button').forEach(x=>x.classList.remove('on'));
+  b.classList.add('on');render();});
+
+async function render(){
+  const m=document.getElementById('main');
+  m.innerHTML='<div class="card">载入中…</div>';
+  try{
+    if(TAB==='home')m.innerHTML=await vHome();
+    if(TAB==='roster')await vRoster(m);
+    if(TAB==='cards')await vCards(m);
+    if(TAB==='settings')await vSettings(m);
+    if(TAB==='gen')await vGen(m);
+    if(TAB==='help')m.innerHTML=vHelp();
+  }catch(e){m.innerHTML='<div class="card err">载入失败：'+e.message+'</div>'}
+}
+
+async function vHome(){
+  const rs=await runs();
+  const cards=await listDir('cards');
+  const years={};
+  cards.forEach(f=>{const y=(f.name.split('_')[0]||'');if(/^\d{4}$/.test(y))years[y]=(years[y]||0)+1});
+  const roster=await getFile('data/birthdays.csv').catch(()=>({text:''}));
+  const n=roster.text.trim().split('\n').length-1;
+  const yl=Object.keys(years).sort().map(y=>`<div><b>${years[y]}</b><span>${y} 年</span></div>`).join('')||'<div><b>0</b><span>暂无贺卡</span></div>';
+  const rl=rs.map(r=>{
+    const c=r.status==='completed'?(r.conclusion==='success'?'var(--ok)':'var(--err)'):'var(--warn)';
+    return `<div class="run"><span>${r.name}</span>
+      <span style="color:${c}">${r.status==='completed'?r.conclusion:r.status} ·
+      ${new Date(r.created_at).toLocaleString('zh-CN')}</span></div>`}).join('')||'<div class="hint">还没有运行记录</div>';
+  return `<div class="card"><h2>仓库状态</h2>
+    <div class="stat"><div><b>${Math.max(n,0)}</b><span>同学人数</span></div>
+    <div><b>${cards.length}</b><span>贺卡总数</span></div>
+    <div><b>${Object.keys(years).length}</b><span>已生成年份</span></div></div></div>
+  <div class="card"><h2>各年份贺卡</h2><div class="stat">${yl}</div></div>
+  <div class="card"><h2>最近运行</h2>${rl}
+    <div class="row" style="margin-top:10px"><button class="gh sm" onclick="location.reload()">刷新</button></div></div>`;
+}
+
+/* ---------- 名单 ---------- */
+let rosterRows=[];
+async function vRoster(m){
+  const {text,sha}=await getFile('data/birthdays.csv');
+  rosterRows=parseCSV(text);
+  m.innerHTML=`<div class="card"><h2>班级名单</h2>
+    <div class="hint" style="margin-bottom:10px">
+      生日写 <b>03-14</b> 或 <b>2005-05-08</b>；历法填 <b>公历</b> 或 <b>农历</b>。
+      备注列会交给 AI，写得越具体，文案越贴人。</div>
+    <div style="overflow-x:auto"><table id="rt">
+      <thead><tr><th style="width:26%">姓名</th><th style="width:22%">生日</th>
+      <th style="width:16%">历法</th><th>备注</th><th style="width:40px"></th></tr></thead>
+      <tbody></tbody></table></div>
+    <div class="row" style="margin-top:12px">
+      <button class="gh sm" onclick="addRow()">+ 加一行</button>
+      <button onclick="saveRoster()">保存名单</button></div>
+    <div class="hint">保存后记得去「生成」里为新同学补生成贺卡。</div></div>`;
+  drawRoster();
+}
+function parseCSV(t){
+  const L=t.replace(/^\uFEFF/,'').trim().split('\n');
+  return L.slice(1).map(l=>{const c=l.split(',');return[c[0]||'',c[1]||'',c[2]||'公历',(c[3]||'')]});
+}
+function toCSV(rows){
+  return '姓名,生日,历法,备注\n'+rows.map(r=>r.join(',')).join('\n')+'\n';
+}
+function drawRoster(){
+  const tb=document.querySelector('#rt tbody');
+  tb.innerHTML=rosterRows.map((r,i)=>`<tr>
+    <td><input value="${esc(r[0])}" data-i="${i}" data-f="0"></td>
+    <td><input value="${esc(r[1])}" data-i="${i}" data-f="1" placeholder="03-14"></td>
+    <td><select data-i="${i}" data-f="2">
+      <option${r[2]!=='农历'?' selected':''}>公历</option>
+      <option${r[2]==='农历'?' selected':''}>农历</option></select></td>
+    <td><input value="${esc(r[3])}" data-i="${i}" data-f="3" placeholder="爱打篮球，晚自习后还要去投几个"></td>
+    <td><button class="gh sm" onclick="delRow(${i})">×</button></td></tr>`).join('');
+  tb.querySelectorAll('input,select').forEach(el=>{
+    el.onchange=e=>{rosterRows[+e.target.dataset.i][+e.target.dataset.f]=e.target.value}});
+}
+function esc(s){return String(s).replace(/"/g,'&quot;')}
+function addRow(){rosterRows.push(['','','公历','']);drawRoster()}
+function delRow(i){rosterRows.splice(i,1);drawRoster()}
+async function saveRoster(){
+  const bad=rosterRows.filter(r=>!r[0]||!r[1]);
+  if(bad.length){toast('有行没填姓名或生日');return}
+  await putFile('data/birthdays.csv',toCSV(rosterRows),'更新班级名单');
+  toast('名单已保存 ✓');
+}
+
+/* ---------- 贺卡 ---------- */
+let allCards=[];
+async function vCards(m){
+  const files=await listDir('cards');
+  allCards=files.filter(f=>/\.jpg$/.test(f.name)).map(f=>{
+    const p=f.name.replace(/\.jpg$/,'').split('_');
+    return{year:p[0],name:p[1],scene:p[2],file:f.name}}).filter(c=>c.year&&c.name);
+  const years=[...new Set(allCards.map(c=>c.year))].sort();
+  const cur=localStorage.getItem('bday_year')||years[years.length-1]||'';
+  m.innerHTML=`<div class="card"><h2>贺卡库</h2>
+    <div class="row">
+      <div style="flex:1"><label>年份</label>
+        <select id="fYear">${years.map(y=>`<option${y===cur?' selected':''}>${y}</option>`).join('')||'<option>暂无</option>'}</select></div>
+      <div style="flex:1"><label>场景</label>
+        <select id="fScene"><option value="">全部</option>
+          <option value="day">当天祝福</option><option value="eve">提前一天</option></select></div>
+      <div style="flex:2"><label>搜索姓名</label><input type="text" id="fName" placeholder="留空=全部"></div>
+    </div></div>
+    <div class="card"><div class="grid" id="grid"></div>
+    <div class="hint" id="cnt"></div></div>`;
+  const paint=()=>{
+    const y=document.getElementById('fYear').value;
+    localStorage.setItem('bday_year',y);
+    const sc=document.getElementById('fScene').value;
+    const kw=document.getElementById('fName').value.trim();
+    const list=allCards.filter(c=>(!y||c.year===y)&&(!sc||c.scene===sc)&&(!kw||c.name.includes(kw)));
+    const g=document.getElementById('grid');
+    g.innerHTML=list.map(c=>`<div class="thumb" onclick="openCard('${c.year}_${c.name}_${c.scene}')">
+      <div class="ph" data-src="cards/${c.file}">载入…</div>
+      <div class="lb"><span>${c.name}</span><span>${c.scene==='day'?'🎂':'🌙'}</span></div></div>`).join('')
+      ||'<div class="hint">没有符合条件的贺卡</div>';
+    document.getElementById('cnt').textContent=`共 ${list.length} 张`;
+    lazy();
+  };
+  ['fYear','fScene','fName'].forEach(id=>{
+    const el=document.getElementById(id);
+    el.oninput=paint;el.onchange=paint;});
+  paint();
+}
+let io=null;
+function lazy(){
+  if(!io){io=new IntersectionObserver(es=>es.forEach(e=>{
+    if(e.isIntersecting){const el=e.target;io.unobserve(el);loadThumb(el)}}),{rootMargin:'300px'})}
+  document.querySelectorAll('.ph[data-src]').forEach(el=>io.observe(el));
+}
+async function loadThumb(el){
+  const src=el.dataset.src;delete el.dataset.src;
+  try{const d=await gh(`/repos/${S.owner}/${S.repo}/contents/${P(src)}?ref=${S.branch}`);
+    const im=new Image();im.src='data:image/jpeg;base64,'+d.content;
+    im.style.width='100%';im.style.height='100%';im.style.objectFit='cover';
+    el.replaceWith(im);
+  }catch(e){el.textContent='载入失败'}
+}
+async function openCard(key){
+  const box=document.getElementById('modalBox');
+  document.getElementById('modal').style.display='flex';
+  box.innerHTML='<div class="hint">载入中…</div>';
+  let img='',copy='';
+  try{const d=await gh(`/repos/${S.owner}/${S.repo}/contents/${P('cards/'+key+'.jpg')}?ref=${S.branch}`);
+    img='data:image/jpeg;base64,'+d.content}catch(e){}
+  try{copy=(await getFile('data/copy/'+key+'.md')).text}catch(e){}
+  const body=copy.split('\n---')[0].split('\n').filter(l=>!l.startsWith('#')).join('\n').trim();
+  const [y,n,sc]=key.split('_');
+  box.innerHTML=`<button class="close" onclick="closeCard()">×</button>
+    <h2 style="margin:0 0 4px">${n} · ${y}</h2>
+    <div class="hint" style="margin-bottom:10px">${sc==='day'?'当天 06:00 生日祝福':'提前一天 21:00 明日预告'}</div>
+    ${img?`<img src="${img}">`:'<div class="hint">贺卡还没生成</div>'}
+    <label>文案（改完点保存，贺卡会自动重新合成，配图不变）</label>
+    <textarea id="cp">${esc(body)}</textarea>
+    <div class="row" style="margin-top:12px">
+      <button onclick="saveCopy('${key}')">保存文案</button>
+      <button class="gh" onclick="regen('${key}',false)">重新合成</button>
+      <button class="gh" onclick="regen('${key}',true)">换个风格重画</button>
+      <button class="danger" onclick="closeCard()">关闭</button></div>
+    <div class="hint">「换个风格重画」会换一套配色重新出图，需要几十秒。</div>`;
+}
+function closeCard(){document.getElementById('modal').style.display='none'}
+async function saveCopy(key){
+  const t=document.getElementById('cp').value.trim();
+  if(!t){toast('文案不能为空');return}
+  const [y,n,sc]=key.split('_');
+  const txt=`# ${n} · ${sc==='day'?'生日祝福':'明日预告'} · ${y}\n\n${t}\n\n---\n\n> 分隔线以上就是要发出去的文案。\n`;
+  await putFile('data/copy/'+key+'.md',txt,'修改 '+key+' 的文案');
+  toast('文案已保存，正在重新合成…');
+  await dispatch('daily.yml',{mode:'regen',target:key,scene:'both',year:'',});
+  closeCard();
+}
+async function regen(key,newStyle){
+  if(newStyle){
+    let st={};try{st=JSON.parse((await getFile('data/styles.json')).text)}catch(e){}
+    const cur=st[key];
+    st[key]=cur===undefined?1:(cur+1)%8;
+    await putFile('data/styles.json',JSON.stringify(st,null,2),key+' 换风格 '+st[key]);
+    try{await delFile('data/img/'+key+'.jpg')}catch(e){}
+    toast('已换风格 '+st[key]+'，正在重画…');
+  }else{toast('正在重新合成…')}
+  await dispatch('daily.yml',{mode:'regen',target:key,scene:'both',year:''});
+  closeCard();
+}
+
+/* ---------- 设置 ---------- */
+async function vSettings(m){
+  await getCfg();
+  const g=k=>cfgGet(k);
+  m.innerHTML=`<div class="card"><h2>发送时间（北京时间）</h2>
+    <div class="row"><div style="flex:1"><label>提前一天「明日预告」</label>
+      <input type="number" id="s_eve" value="${parseInt(g('eve_hour'))||21}" min="0" max="23"></div>
+    <div style="flex:1"><label>当天「生日祝福」</label>
+      <input type="number" id="s_day" value="${parseInt(g('day_hour'))||6}" min="0" max="23"></div></div>
+    <div class="hint">改这里只改程序内部判断。<b>还必须同步改 GitHub 的定时任务时刻</b>，
+      否则任务根本不会在那个点启动 —— 见下方「定时任务」。</div></div>
+
+  <div class="card"><h2>生成时机</h2>
+    <div class="row"><div style="flex:1"><label>提前多久自动生成</label>
+      <select id="s_lead">${['0','1h','24h','72h','168h'].map(v=>
+        `<option${g('lead')===v?' selected':''}>${v}</option>`).join('')}</select></div>
+    <div style="flex:1"><label>超时多久不再补发（小时）</label>
+      <input type="number" id="s_grace" value="${parseInt(g('grace_hours'))||12}"></div></div>
+    <div class="hint">「超时不再补发」防止首次运行时把今年已过完的生日一次性刷进群。</div></div>
+
+  <div class="card"><h2>贺卡外观</h2>
+    <div class="switch"><div class="t"><div>融入泰来地域元素</div>
+      <div class="d">嫩江、泰湖湿地、稻田、雪原等。关掉则只画通用生日元素。</div></div>
+      <div class="toggle${g('local_flavor')!=='false'?' on':''}" onclick="tg(this)"></div></div>
+    <div class="row" style="margin-top:10px"><div style="flex:1"><label>配图风格</label>
+      <select id="s_style"><option value="auto"${g('image_style')==='auto'?' selected':''}>自动轮换（每人不同）</option>
+      ${[0,1,2,3,4,5,6,7].map(i=>`<option value="${i}"${g('image_style')===String(i)?' selected':''}>固定风格 ${i}</option>`).join('')}</select></div></div></div>
+
+  <div class="card"><h2>安全</h2>
+    <div class="switch"><div class="t"><div>本地凭据不上传</div>
+      <div class="d">data/credentials.local.yaml 已在 .gitignore 里排除</div></div>
+      <div class="toggle on" style="pointer-events:none"></div></div>
+    <div class="hint">QQ 与 AI 的密钥请填在仓库 <b>Settings → Secrets → Actions</b>，不要写进 config.yaml。</div></div>
+
+  <div class="card"><div class="row"><button onclick="saveSettings()">保存设置</button></div>
+    <div class="hint">保存后约 1 分钟内在下次运行时生效。</div></div>`;
+  window._toggles=document.querySelectorAll('.card .toggle[onclick]');
+}
+function tg(el){el.classList.toggle('on')}
+async function saveSettings(){
+  await getCfg();
+  cfgSet('eve_hour',document.getElementById('s_eve').value);
+  cfgSet('day_hour',document.getElementById('s_day').value);
+  cfgSet('lead',document.getElementById('s_lead').value);
+  cfgSet('grace_hours',document.getElementById('s_grace').value);
+  cfgSet('local_flavor',[...document.querySelectorAll('.toggle')][0].classList.contains('on')?'true':'false');
+  cfgSet('image_style',document.getElementById('s_style').value);
+  await saveCfg('时间/外观');
+}
+
+/* ---------- 生成 ---------- */
+async function vGen(m){
+  const rs=await runs();
+  const y=new Date().getFullYear();
+  const opts=[y,y+1,y+2,y+3].map(v=>`<option>${v}</option>`).join('');
+  m.innerHTML=`<div class="card"><h2>生成某年的贺卡</h2>
+    <div class="row"><div style="flex:1"><label>年份</label><select id="gYear">${opts}</select></div>
+      <div style="flex:1"><label>场景</label><select id="gScene">
+        <option value="both">两个都要</option><option value="day">只当天</option>
+        <option value="eve">只提前一天</option></select></div></div>
+    <div class="row"><button onclick="runGen()">开始生成</button></div>
+    <div class="hint">52 人 × 2 场景约 20～40 分钟。跑完点下面的「刷新」看状态，
+      或去 Actions 页面看日志、下载贺卡。</div></div>
+
+  <div class="card"><h2>其它任务</h2>
+    <div class="row">
+      <button class="gh" onclick="runRaw('rebuild')">重新合成全部（按现有文案）</button>
+      <button class="gh" onclick="runRaw('dry')">演练一次（只打印不真发）</button>
+      <button class="gh" onclick="runRaw('send')">立即发送（到点的才发）</button></div></div>
+
+  <div class="card"><h2>运行记录</h2><div id="runlist">载入中…</div>
+    <div class="row" style="margin-top:10px"><button class="gh sm" onclick="render()">刷新</button></div></div>`;
+  paintRuns(rs);
+}
+async function paintRuns(rs){
+  const el=document.getElementById('runlist');if(!el)return;
+  el.innerHTML=rs.map(r=>{const c=r.status==='completed'?(r.conclusion==='success'?'var(--ok)':'var(--err)'):'var(--warn)';
+    return `<div class="run"><span>${r.name}<br><span class="hint">${r.display_title||''}</span></span>
+      <span style="color:${c};text-align:right">${r.status==='completed'?r.conclusion:r.status}<br>
+      <span class="hint">${new Date(r.created_at).toLocaleString('zh-CN')}</span></span></div>`}).join('')
+    ||'<div class="hint">暂无记录</div>';
+}
+async function runGen(){
+  const y=document.getElementById('gYear').value,sc=document.getElementById('gScene').value;
+  await dispatch('daily.yml',{mode:'generate',year:y,scene:sc,target:''});
+  toast('已启动 '+y+' 年生成，约 20-40 分钟');setTimeout(render,1500);
+}
+async function runRaw(mode){
+  await dispatch('daily.yml',{mode,scene:'both',year:'',target:''});
+  toast('已启动：'+mode);setTimeout(render,1500);
+}
+
+/* ---------- 说明 ---------- */
+function vHelp(){
+  return `<div class="card"><h2>怎么用</h2>
+    <p><b>改文案</b>：贺卡 → 点开某张 → 改文字 → 保存。贺卡自动重做，配图不变。</p>
+    <p><b>加同学</b>：名单 → 加一行 → 保存 → 生成 → 选年份 → 开始生成。<br>
+      只补新同学的，已生成的不会重做。</p>
+    <p><b>改发送时刻</b>：设置里改了还不够，必须同时改
+      <code>.github/workflows/daily.yml</code> 里最上面两行 cron。
+      cron 用的是 UTC 时间，北京时间减 8 小时。</p>
+    <p><b>每年自动续期</b>：12 月 20 日会自动生成下一年的全部贺卡，不用管。</p></div>
+  <div class="card"><h2>常见问题</h2>
+    <p><b>贺卡一直没变？</b>先去 Actions 看任务是不是绿色 ✓，红色就点进去看报错。</p>
+    <p><b>配图是灰白渐变？</b>AI Key 没生效，去 Secrets 检查
+      <code>AI_TEXT_KEY</code> / <code>AI_IMAGE_KEY</code>。</p>
+    <p><b>群里收不到？</b>群设置 → 机器人 → 「主动在群聊内发言」开关必须打开。</p></div>`;
+}
+
+/* ---------- 启动 ---------- */
+document.getElementById('btnLogin').onclick=async()=>{
+  S.tk=document.getElementById('tk').value.trim();
+  S.owner=document.getElementById('owner').value.trim();
+  S.repo=document.getElementById('repo').value.trim();
+  S.branch=document.getElementById('branch').value.trim()||'master';
+  if(!S.tk||!S.owner)return toast('Token 和用户名必填');
+  try{await gh('/user');save();document.getElementById('login').style.display='none';
+    document.getElementById('repoTag').textContent=S.owner+'/'+S.repo;render();}
+  catch(e){toast('连接失败：'+e.message)}
+};
+document.getElementById('btnGuess').onclick=async()=>{
+  const t=document.getElementById('tk').value.trim();if(!t)return toast('先填 Token');
+  try{const u=await fetch(API+'/user',{headers:{Authorization:'Bearer '+t}}).then(r=>r.json());
+    document.getElementById('owner').value=u.login||'';toast('已填入：'+u.login)}
+  catch(e){toast('Token 可能无效')}
+};
+document.getElementById('btnLogout').onclick=()=>{
+  localStorage.removeItem('bday_admin');location.reload()};
+document.getElementById('btnRefresh').onclick=()=>{cfgText='';render()};
+
+load();
+if(S.tk&&S.owner){
+  document.getElementById('login').style.display='none';
+  document.getElementById('repoTag').textContent=S.owner+'/'+S.repo;
+  document.getElementById('owner').value=S.owner;
+  document.getElementById('repo').value=S.repo;
+  document.getElementById('branch').value=S.branch;
+  render();
+}
+</script>
+</body>
+</html>
