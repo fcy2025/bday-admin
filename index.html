@@ -343,7 +343,13 @@ async function vCards(m){
       <div class="ph" data-src="cards/${c.file}">载入…</div>
       <div class="lb"><span>${c.name}</span><span>${c.scene==='day'?'🎂':'🌙'}</span></div></div>`).join('')
       ||'<div class="hint">没有符合条件的贺卡</div>';
-    document.getElementById('cnt').textContent=`共 ${list.length} 张`;
+    const nd=list.filter(c=>c.scene==='day').length;
+    const ne=list.filter(c=>c.scene==='eve').length;
+    let extra='';
+    if(nd!==ne)
+      extra=` ⚠ 当天 ${nd} 张 / 提前一天 ${ne} 张 —— 数量不一致，建议用「清理」重生成`;
+    document.getElementById('cnt').innerHTML=
+      `共 ${list.length} 张（当天 ${nd} ／提前一天 ${ne}）${extra}`;
     lazy();
   };
   ['fYear','fScene','fName'].forEach(id=>{
@@ -480,6 +486,9 @@ async function vGen(m){
   const rs=await runs();
   const y=new Date().getFullYear();
   const opts=[y,y+1,y+2,y+3].map(v=>`<option>${v}</option>`).join('');
+  const files=await listDir('cards');
+  const yearsAll=[...new Set(files.filter(f=>/^\d{4}_/.test(f.name))
+    .map(f=>f.name.slice(0,4)))].sort();
   m.innerHTML=`<div class="card"><h2>生成某年的贺卡</h2>
     <div class="row"><div style="flex:1"><label>年份</label><select id="gYear">${opts}</select></div>
       <div style="flex:1"><label>场景</label><select id="gScene">
@@ -497,6 +506,23 @@ async function vGen(m){
     <div class="row"><button onclick="runGen()">开始生成</button></div>
     <div class="hint">52 人 × 2 场景约 20～40 分钟。跑完点下面的「刷新」看状态，
       或去 Actions 页面看日志、下载贺卡。</div></div>
+
+  <div class="card"><h2>🧹 清理产物</h2>
+    <div class="row">
+      <div style="flex:1"><label>清理哪个年份</label>
+        <select id="cYear">
+          <option value="all">全部年份</option>
+          ${yearsAll.map(y=>`<option>${y}</option>`).join('')}
+          ${[y,y+1,y+2].filter(v=>!yearsAll.includes(String(v))).map(v=>`<option>${v}</option>`).join('')}
+        </select></div>
+      <div style="flex:2"><label>&nbsp;</label>
+        <button class="danger" onclick="runClean()">清空</button></div></div>
+    <div class="hint">
+      只删文件、不生成。删的是选中年头的
+      <code>cards/</code>、<code>data/copy/</code>、<code>data/img/</code> 里对应文件。<br>
+      <b>名单（birthdays.csv）不受影响。</b><br>
+      旧产物是 <b>2026</b> 开头的（之前那次生成默认用了当前年份），
+      想清掉它们就选 2026 或「全部年份」。</div></div>
 
   <div class="card"><h2>其它任务</h2>
     <div class="row">
@@ -522,6 +548,12 @@ async function runGen(){
   await dispatch('daily.yml',{mode:'generate',year:y,scene:sc,target:'',clean:cl});
   toast(cl==='true'?('已清空并重生成 '+y+' 年'):('已启动 '+y+' 年生成'))
   setTimeout(render,1500);
+}
+async function runClean(){
+  const y=document.getElementById('cYear').value;
+  if(!confirm('确定清空 '+y+' 的产物吗？\n（只删贺卡/文案/配图，不动名单）'))return;
+  await dispatch('daily.yml',{mode:'clean',year:y,scene:'both',target:'',clean:'false'});
+  toast('已启动清理：'+y);setTimeout(render,1500);
 }
 async function runRaw(mode){
   await dispatch('daily.yml',{mode,scene:'both',year:'',target:'',clean:'false'});
