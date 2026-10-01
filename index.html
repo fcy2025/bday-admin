@@ -148,6 +148,20 @@ let CACHE={};
 function toast(m){const t=document.getElementById('toast');t.textContent=m;
   t.style.display='block';clearTimeout(t._);t._=setTimeout(()=>t.style.display='none',2600);}
 function save(){localStorage.setItem('bday_admin',JSON.stringify(S));}
+function addDiag(msg){
+  const box=document.querySelector('#login .box');
+  if(document.getElementById('diag'))document.getElementById('diag').remove();
+  const d=document.createElement('div');
+  d.id='diag';
+  d.style.cssText='margin-top:12px;padding:10px 12px;background:#2a1f1f;border:1px solid #5a3030;border-radius:8px;font-size:13px;line-height:1.7';
+  let tip='';
+  if(/401|Bad credentials/.test(msg))
+    tip='令牌不对或没复制完整。<br>建议：<b>改用「自动填用户名」按钮测试</b>——它也报 401 就说明令牌本身有问题。';
+  else if(/404/.test(msg))
+    tip='仓库名/用户名/分支不对，或令牌没权限访问这个仓库。';
+  d.innerHTML='<b style="color:#ff6b6b">'+msg+'</b><br>'+tip;
+  box.appendChild(d);
+}
 function load(){try{Object.assign(S,JSON.parse(localStorage.getItem('bday_admin')||'{}'))}catch(e){}}
 function b64enc(str){const b=new TextEncoder().encode(str);let s='';
   for(let i=0;i<b.length;i++)s+=String.fromCharCode(b[i]);return btoa(s);}
@@ -509,17 +523,27 @@ function vHelp(){
 
 /* ---------- 启动 ---------- */
 document.getElementById('btnLogin').onclick=async()=>{
-  S.tk=document.getElementById('tk').value.trim();
+  // 手机粘贴长令牌时常混入换行/空格，一律剔除
+  S.tk=document.getElementById('tk').value.replace(/\s/g,'');
   S.owner=document.getElementById('owner').value.trim();
   S.repo=document.getElementById('repo').value.trim();
   S.branch=document.getElementById('branch').value.trim()||'master';
   if(!S.tk||!S.owner)return toast('Token 和用户名必填');
+  if(!/^(github_pat_|ghp_|gho_|ghu_|ghs_)/.test(S.tk))
+    toast('令牌格式不对（应以 github_pat_ 开头），多半是复制时被截断了');
+  document.getElementById('btnLogin').disabled=true;
+  document.getElementById('btnLogin').textContent='连接中…';
   try{await gh('/user');save();document.getElementById('login').style.display='none';
     document.getElementById('repoTag').textContent=S.owner+'/'+S.repo;render();}
-  catch(e){toast('连接失败：'+e.message)}
+  catch(e){
+    document.getElementById('btnLogin').disabled=false;
+    document.getElementById('btnLogin').textContent='连接';
+    toast('连接失败：'+e.message);
+    addDiag(e.message);}
 };
 document.getElementById('btnGuess').onclick=async()=>{
-  const t=document.getElementById('tk').value.trim();if(!t)return toast('先填 Token');
+  const t=document.getElementById('tk').value.replace(/\s/g,'');
+  if(!t)return toast('先填 Token');
   try{const u=await fetch(API+'/user',{headers:{Authorization:'Bearer '+t}}).then(r=>r.json());
     document.getElementById('owner').value=u.login||'';toast('已填入：'+u.login)}
   catch(e){toast('Token 可能无效')}
