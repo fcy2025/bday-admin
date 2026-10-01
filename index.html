@@ -432,9 +432,22 @@ async function vSettings(m){
       <input type="number" id="s_grace" value="${parseInt(g('grace_hours'))||12}"></div></div>
     <div class="hint">「超时不再补发」防止首次运行时把今年已过完的生日一次性刷进群。</div></div>
 
+  <div class="card"><h2>文案规则</h2>
+    <div class="switch"><div class="t"><div>杜绝编造（始终开启）</div>
+      <div class="d">AI 只知道姓名，不许虚构这人的性格、爱好、经历；
+        不写班级、学校、地名；不写作业考试食堂等日常；
+        不用万事如意这类套话。生成后自动校验，违规重写。</div></div>
+      <div class="toggle on" style="pointer-events:none"></div></div>
+    <div class="switch"><div class="t"><div>使用名单备注里的真实信息</div>
+      <div class="d">备注为空时 AI 不得自行想象。想让文案更贴人，
+        去「名单」页填具体细节。</div></div>
+      <div class="toggle on" style="pointer-events:none"></div></div></div>
+
   <div class="card"><h2>贺卡外观</h2>
-    <div class="switch"><div class="t"><div>融入泰来地域元素</div>
-      <div class="d">嫩江、泰湖湿地、稻田、雪原等。关掉则只画通用生日元素。</div></div>
+    <div class="switch"><div class="t"><div>配图融入泰来地域元素</div>
+      <div class="d">只用泰湖湿地的湖面、芦苇、荷花、飞鸟、木栈道
+        （县城东郊，据泰来县政府官网）。<b>只影响配图，不进文案。</b>
+        嫩江是东部界河、不穿过县城，故不采用。</div></div>
       <div class="toggle${g('local_flavor')!=='false'?' on':''}" onclick="tg(this)"></div></div>
     <div class="row" style="margin-top:10px"><div style="flex:1"><label>配图风格</label>
       <select id="s_style"><option value="auto"${g('image_style')==='auto'?' selected':''}>自动轮换（每人不同）</option>
@@ -457,7 +470,7 @@ async function saveSettings(){
   cfgSet('day_hour',document.getElementById('s_day').value);
   cfgSet('lead',document.getElementById('s_lead').value);
   cfgSet('grace_hours',document.getElementById('s_grace').value);
-  cfgSet('local_flavor',[...document.querySelectorAll('.toggle')][0].classList.contains('on')?'true':'false');
+  cfgSet('local_flavor',[...document.querySelectorAll('.toggle[onclick]')][0].classList.contains('on')?'true':'false');
   cfgSet('image_style',document.getElementById('s_style').value);
   await saveCfg('时间/外观');
 }
