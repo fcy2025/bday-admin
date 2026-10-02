@@ -518,11 +518,10 @@ async function vGen(m){
       <div style="flex:2"><label>&nbsp;</label>
         <button class="danger" onclick="runClean()">清空</button></div></div>
     <div class="hint">
-      只删文件、不生成。删的是选中年头的
-      <code>cards/</code>、<code>data/copy/</code>、<code>data/img/</code> 里对应文件。<br>
-      <b>名单（birthdays.csv）不受影响。</b><br>
-      旧产物是 <b>2026</b> 开头的（之前那次生成默认用了当前年份），
-      想清掉它们就选 2026 或「全部年份」。</div></div>
+      <b>直接删，秒级生效，不用等 Actions。</b>
+      删的是选中年头的 <code>cards/</code>、<code>data/copy/</code>、
+      <code>data/img/</code> 里 <code>年份_姓名_场景</code> 格式的文件。<br>
+      <b>名单（birthdays.csv）不受影响。</b></div></div>
 
   <div class="card"><h2>其它任务</h2>
     <div class="row">
@@ -549,11 +548,67 @@ async function runGen(){
   toast(cl==='true'?('已清空并重生成 '+y+' 年'):('已启动 '+y+' 年生成'))
   setTimeout(render,1500);
 }
+/* 用 Git Trees API 批量删除：一次提交搞定，秒级生效。
+   不走 GitHub Actions —— Actions 的 git 回写有个坑：
+   `git pull --rebase -X ours` 在 rebase 语义下保留的是远程版本，
+   会把刚删掉的文件全部复活（日志显示删了 229 个，仓库里一个没少）。
+   直接从 API 删，绕开整个 git 冲突流程，彻底杜绝这个问题。 */
+async function deletePaths(paths){
+  const ref=`heads/${S.branch}`;
+  let parent=null;
+  // 每批 100 个，避免单次请求过大
+  for(let i=0;i<paths.length;i+=100){
+    const batch=paths.slice(i,i+100);
+    const refData=await gh(`/repos/${S.owner}/${S.repo}/git/ref/${ref}`);
+    parent=refData.object.sha;
+    const baseCommit=await gh(`/repos/${S.owner}/${S.repo}/git/commits/${parent}`);
+    // sha:null = 删除该路径
+    const tree=batch.map(p=>({path:p,mode:'100644',type:'blob',sha:null}));
+    const newTree=await gh(`/repos/${S.owner}/${S.repo}/git/trees`,{method:'POST',
+      body:JSON.stringify({base_tree:baseCommit.tree.sha,tree})});
+    const newCommit=await gh(`/repos/${S.owner}/${S.repo}/git/commits`,{method:'POST',
+      body:JSON.stringify({message:`清理生日贺卡产物 (${i+1}-${i+batch.length})`,
+        tree:newTree.sha,parents:[parent]})});
+    await gh(`/repos/${S.owner}/${S.repo}/git/refs/${ref}`,{method:'PATCH',
+      body:JSON.stringify({sha:newCommit.sha})});
+  }
+  return parent;
+}
+
 async function runClean(){
   const y=document.getElementById('cYear').value;
-  if(!confirm('确定清空 '+y+' 的产物吗？\n（只删贺卡/文案/配图，不动名单）'))return;
-  await dispatch('daily.yml',{mode:'clean',year:y,scene:'both',target:'',clean:'false'});
-  toast('已启动清理：'+y);setTimeout(render,1500);
+  const label=(y==='all')?'全部年份':(y+' 年');
+  if(!confirm('确定清空「'+label+'」的产物吗？\n\n'+
+    '将删除该年份的贺卡、文案、配图。\n名单(birthdays.csv)不受影响。\n\n'+
+    '此操作不可撤销。'))return;
+
+  const btn=document.querySelector('[onclick="runClean()"]');
+  if(btn){btn.disabled=true;btn.textContent='清理中…';}
+  try{
+    // 收集三个目录下符合条件的文件
+    const dirs=['cards','data/copy','data/img'];
+    let paths=[];
+    for(const d of dirs){
+      const fs=await listDir(d);
+      for(const f of fs){
+        if(f.type!=='file')continue;
+        // 只匹配「年份_姓名_场景」格式，README.md 等不会被误删
+        const hit=(y==='all') ? /^\d{4}_/.test(f.name) : f.name.startsWith(y+'_');
+        if(!hit)continue;
+        paths.push(d+'/'+f.name);
+      }
+    }
+    if(!paths.length){toast('没有找到可清理的文件');return;}
+    if(!confirm(`将删除 ${paths.length} 个文件，继续？`))return;
+    await deletePaths(paths);
+    toast(`✅ 已删除 ${paths.length} 个文件，刷新页面查看`);
+    setTimeout(()=>location.reload(),1200);
+  }catch(e){
+    toast('清理失败：'+e.message);
+    console.error(e);
+  }finally{
+    if(btn){btn.disabled=false;btn.textContent='清空';}
+  }
 }
 async function runRaw(mode){
   await dispatch('daily.yml',{mode,scene:'both',year:'',target:'',clean:'false'});
