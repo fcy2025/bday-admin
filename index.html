@@ -140,6 +140,130 @@ padding:11px 18px;z-index:99;font-size:14px;display:none;max-width:90vw}
 <div id="toast"></div>
 
 <script>
+/* ─────────────────────────────────────────────────────
+   农历换算（1900-2100），内联，不依赖外部 CDN
+   ─────────────────────────────────────────────────────
+   数据表由权威农历库 lunar-python 逐月实测生成：
+   遍历 1900-2100 每一年，用「该月是否存在三十日」判定大小月，
+   用「负月份是否可构造」判定闰月及其位置。
+
+   编码（与通行实现一致）：
+     bits 0-3   闰月月份（0 = 无闰月）
+     bit  16    闰月是否为大月（30 天）
+     bit (16-m) 第 m 月是否为大月
+
+   已核对的闰月年：2023闰二月、2025闰六月、2028闰五月、
+   2033闰冬月、2017闰六月、2020闰四月、2014闰九月、2012闰四月
+   ───────────────────────────────────────────────────── */
+var LUNAR_INFO = [
+0x04bd8,0x04ae0,0x0a570,0x054d5,0x0d260,0x0d950,0x16554,0x056a0,0x09ad0,0x055d2,
+0x04ae0,0x0a5b6,0x0a4d0,0x0d250,0x1d255,0x0b540,0x0d6a0,0x0ada2,0x095b0,0x14977,
+0x04970,0x0a4b0,0x0b4b5,0x06a50,0x06d40,0x1ab54,0x02b60,0x09570,0x052f2,0x04970,
+0x06566,0x0d4a0,0x0ea50,0x16a95,0x05ad0,0x02b60,0x186e3,0x092e0,0x1c8d7,0x0c950,
+0x0d4a0,0x1d8a6,0x0b550,0x056a0,0x1a5b4,0x025d0,0x092d0,0x0d2b2,0x0a950,0x0b557,
+0x06ca0,0x0b550,0x15355,0x04da0,0x0a5b0,0x14573,0x052b0,0x0a9a8,0x0e950,0x06aa0,
+0x0aea6,0x0ab50,0x04b60,0x0aae4,0x0a570,0x05260,0x0f263,0x0d950,0x05b57,0x056a0,
+0x096d0,0x04dd5,0x04ad0,0x0a4d0,0x0d4d4,0x0d250,0x0d558,0x0b540,0x0b6a0,0x195a6,
+0x095b0,0x049b0,0x0a974,0x0a4b0,0x0b27a,0x06a50,0x06d40,0x0af46,0x0ab60,0x09570,
+0x04af5,0x04970,0x064b0,0x074a3,0x0ea50,0x06b58,0x05ac0,0x0ab60,0x096d5,0x092e0,
+0x0c960,0x0d954,0x0d4a0,0x0da50,0x07552,0x056a0,0x0abb7,0x025d0,0x092d0,0x0cab5,
+0x0a950,0x0b4a0,0x0baa4,0x0ad50,0x055d9,0x04ba0,0x0a5b0,0x15176,0x052b0,0x0a930,
+0x07954,0x06aa0,0x0ad50,0x05b52,0x04b60,0x0a6e6,0x0a4e0,0x0d260,0x0ea65,0x0d530,
+0x05aa0,0x076a3,0x096d0,0x04afb,0x04ad0,0x0a4d0,0x1d0b6,0x0d250,0x0d520,0x0dd45,
+0x0b5a0,0x056d0,0x055b2,0x049b0,0x0a577,0x0a4b0,0x0aa50,0x1b255,0x06d20,0x0ada0,
+0x14b63,0x09370,0x049f8,0x04970,0x064b0,0x168a6,0x0ea50,0x06b20,0x1a6c4,0x0aae0,
+0x092e0,0x0d2e3,0x0c960,0x0d557,0x0d4a0,0x0da50,0x05d55,0x056a0,0x0a6d0,0x055d4,
+0x052d0,0x0a9b8,0x0a950,0x0b4a0,0x0b6a6,0x0ad50,0x055a0,0x0aba4,0x0a5b0,0x052b0,
+0x0b273,0x06930,0x07337,0x06aa0,0x0ad50,0x14b55,0x04b60,0x0a570,0x054e4,0x0d160,
+0x0e968,0x0d520,0x0daa0,0x16aa6,0x056d0,0x04ae0,0x0a9d4,0x0a2d0,0x0d150,0x0f252,
+0x0d520
+];
+
+function lLeapMonth(y){ return LUNAR_INFO[y-1900] & 0xf; }
+function lLeapDays(y){ return lLeapMonth(y) ? ((LUNAR_INFO[y-1900] & 0x10000) ? 30 : 29) : 0; }
+function lMonthDays(y,m){ return (LUNAR_INFO[y-1900] & (0x10000>>m)) ? 30 : 29; }
+function lYearDays(y){
+  var sum = 348;                       // 12 × 29
+  for (var i = 0x8000; i > 0x8; i >>= 1) sum += (LUNAR_INFO[y-1900] & i) ? 1 : 0;
+  return sum + lLeapDays(y);
+}
+
+var LUNAR_BASE = Date.UTC(1900, 0, 31);   // 1900-01-31 = 农历1900年正月初一
+var CN_NUM  = ['零','一','二','三','四','五','六','七','八','九','十'];
+var CN_MON  = ['正','二','三','四','五','六','七','八','九','十','冬','腊'];
+var CN_DAY1 = ['初','十','廿','三'];
+
+function cnMonth(m, isLeap){
+  if (m === 1) return '正';
+  if (m === 11) return '冬';
+  if (m === 12) return '腊';
+  return CN_NUM[m];
+}
+function cnDay(d){
+  if (d === 10) return '初十';
+  if (d === 20) return '二十';
+  if (d === 30) return '三十';
+  return CN_DAY1[Math.floor(d/10)] + CN_NUM[d%10];
+}
+
+/* 公历 → 农历 */
+function solar2lunar(y, m, d){
+  if (y < 1900 || y > 2100) return -1;
+  var offset = Math.floor((Date.UTC(y, m-1, d) - LUNAR_BASE) / 86400000);
+  if (offset < 0) return -1;
+  var i, temp = 0;
+  for (i = 1900; i < 2101 && offset > 0; i++){ temp = lYearDays(i); offset -= temp; }
+  if (offset < 0){ offset += temp; i--; }
+  var year = i;
+  var leap = lLeapMonth(year), isLeap = false;
+  for (i = 1; i < 13 && offset > 0; i++){
+    if (leap > 0 && i === (leap + 1) && !isLeap){ --i; isLeap = true; temp = lLeapDays(year); }
+    else { temp = lMonthDays(year, i); }
+    if (isLeap && i === (leap + 1)) isLeap = false;
+    offset -= temp;
+  }
+  if (offset === 0 && leap > 0 && i === leap + 1){
+    if (isLeap){ isLeap = false; } else { isLeap = true; --i; }
+  }
+  if (offset < 0){ offset += temp; --i; }
+  return { year: year, month: i, day: offset + 1, isLeap: isLeap,
+           monthCn: (isLeap ? '闰' : '') + cnMonth(i) + '月',
+           dayCn: cnDay(offset + 1) };
+}
+
+/* 农历 → 公历 */
+function lunar2solar(y, m, d, isLeap){
+  if (y < 1900 || y > 2100) return -1;
+  isLeap = !!isLeap;
+  if (isLeap && lLeapMonth(y) !== m) return -1;   // 该年 m 月不是闰月
+  if (d > lMonthDays(y, m)) return -1;            // 该月没有这一天
+  var offset = 0, i;
+  for (i = 1900; i < y; i++) offset += lYearDays(i);
+  for (i = 1; i < m; i++){
+    offset += lMonthDays(y, i);
+    if (lLeapMonth(y) === i) offset += lLeapDays(y);   // 闰 i 月紧跟 i 月之后
+  }
+  if (isLeap) offset += lMonthDays(y, m);         // 闰 m 月前面还有正常 m 月
+  offset += d - 1;
+  var dt = new Date(LUNAR_BASE + offset * 86400000);
+  return { year: dt.getUTCFullYear(), month: dt.getUTCMonth() + 1, day: dt.getUTCDate() };
+}
+
+/* 给定农历月日，求某年对应的公历日期。
+   该年没有三十就回退到廿九；闰月在该年不存在就回退到正常月。 */
+function lunarBirthdayInYear(m, d, isLeap, y){
+  var tries = [[m, d, isLeap]];
+  if (d >= 30) tries.push([m, 29, false === isLeap ? false : isLeap]);
+  if (isLeap) tries.push([m, d, false]);
+  if (d >= 30 && isLeap) tries.push([m, 29, false]);
+  for (var i = 0; i < tries.length; i++){
+    var r = lunar2solar(y, tries[i][0], tries[i][1], tries[i][2]);
+    if (r !== -1) return r;
+  }
+  return null;
+}
+
+
 const API='https://api.github.com';
 let S={tk:'',owner:'',repo:'',branch:'master'};
 let CACHE={};
@@ -266,50 +390,182 @@ async function vHome(){
 /* ---------- 名单 ---------- */
 let rosterRows=[];
 async function vRoster(m){
-  const {text,sha}=await getFile('data/birthdays.csv');
+  const {text}=await getFile('data/birthdays.csv');
   rosterRows=parseCSV(text);
   m.innerHTML=`<div class="card"><h2>班级名单</h2>
-    <div class="hint" style="margin-bottom:10px">
-      生日写 <b>03-14</b> 或 <b>2005-05-08</b>；历法填 <b>公历</b> 或 <b>农历</b>。
-      备注列会交给 AI，写得越具体，文案越贴人。</div>
+    <div class="hint" style="margin-bottom:10px;line-height:1.9">
+      <b>出生日期一律填公历</b>（含年份，点输入框会弹出日历）。<br>
+      <b>过生日</b>选「公历」= 每年都在 4 月 16 日过；
+      选「农历」= 每年都在农历三月十四过（对应的公历日期每年不同）。<br>
+      选好后会<b>实时显示换算结果和未来三年的发送日期</b>，请核对是否正确。</div>
+
+    <div class="row" style="margin-bottom:12px">
+      <div style="flex:1"><label>默认出生年份（新增行自动填，省得一个个选）</label>
+        <input type="number" id="defYear" placeholder="如 2011"
+          value="${localStorage.getItem('bday_defyear')||''}"
+          onchange="localStorage.setItem('bday_defyear',this.value)"></div></div>
+
     <div style="overflow-x:auto"><table id="rt">
-      <thead><tr><th style="width:26%">姓名</th><th style="width:22%">生日</th>
-      <th style="width:16%">历法</th><th>备注</th><th style="width:40px"></th></tr></thead>
+      <thead><tr>
+        <th style="width:16%">姓名</th>
+        <th style="width:22%">出生日期(公历)</th>
+        <th style="width:14%">过生日</th>
+        <th style="width:11%">性别</th>
+        <th style="width:22%">换算结果</th>
+        <th>备注</th><th style="width:36px"></th>
+      </tr></thead>
       <tbody></tbody></table></div>
+
     <div class="row" style="margin-top:12px">
       <button class="gh sm" onclick="addRow()">+ 加一行</button>
       <button onclick="saveRoster()">保存名单</button></div>
+    <div class="hint" id="rst"></div>
     <div class="hint">保存后记得去「生成」里为新同学补生成贺卡。</div></div>`;
   drawRoster();
 }
+
+/* CSV 列：姓名,出生日期,过生日,性别,备注
+   内部数组：[姓名, 出生日期, 过生日, 性别, 备注]
+   兼容旧格式：姓名,生日,历法,性别,备注 */
 function parseCSV(t){
   const L=t.replace(/^\uFEFF/,'').trim().split('\n');
-  return L.slice(1).map(l=>{const c=l.split(',');return[c[0]||'',c[1]||'',c[2]||'公历',(c[3]||'')]});
+  const head=(L[0]||'').split(',').map(x=>x.trim());
+  const iBirth=head.indexOf('出生日期')>=0?head.indexOf('出生日期'):head.indexOf('生日');
+  const iCal=head.indexOf('过生日')>=0?head.indexOf('过生日'):head.indexOf('历法');
+  const iG=head.indexOf('性别');
+  const iN=head.indexOf('备注');
+  return L.slice(1).map(l=>{
+    const c=l.split(',');
+    return [
+      c[0]||'',
+      (iBirth>=0?c[iBirth]:c[1])||'',
+      normCal((iCal>=0?c[iCal]:c[2])||'公历'),
+      (iG>=0?c[iG]:'')||'',
+      (iN>=0?c[iN]:(c[3]||''))||'',
+    ];
+  });
+}
+function normCal(v){
+  v=(v||'').trim();
+  return (v==='农历'||v==='阴历')?'农历':'公历';
 }
 function toCSV(rows){
-  return '姓名,生日,历法,备注\n'+rows.map(r=>r.join(',')).join('\n')+'\n';
+  return '姓名,出生日期,过生日,性别,备注\n'
+    +rows.map(r=>[r[0],r[1],r[2],r[3]||'',r[4]||''].join(',')).join('\n')+'\n';
 }
+
+/* 把 "2011-04-16" / "2011/4/16" 解析成 [y,m,d] */
+function parseDate(v){
+  if(!v)return null;
+  const m=String(v).match(/(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/);
+  if(!m)return null;
+  return [+m[1],+m[2],+m[3]];
+}
+function fmtMD(d){return d.month+'-'+String(d.day).padStart(2,'0');}
+
+/* 计算这一行的换算结果 + 未来三年发送日期 */
+function calcRow(r){
+  const dt=parseDate(r[1]);
+  const cal=r[2];
+  if(!dt){
+    // 只有月日（如 "08-15"）：公历生日够用，农历生日必须补年份
+    if(cal==='农历')
+      return '<span style="color:var(--err)">农历生日需要完整出生日期<br>（含年份，如 2011-04-16）</span>';
+    return '<span style="color:var(--dim)">—</span>';
+  }
+  const [y,mo,d]=dt;
+  if(cal==='公历'){
+    return `<b>公历 ${mo}月${d}日</b><br>
+      <span style="color:var(--dim)">每年固定这天</span>`;
+  }
+  const l=solar2lunar(y,mo,d);
+  if(l===-1)return '<span style="color:var(--err)">换算失败</span>';
+  const now=new Date().getFullYear();
+  let pre=[];
+  for(const yy of [now,now+1,now+2]){
+    const s=lunarBirthdayInYear(l.month,l.day,l.isLeap,yy);
+    pre.push(s?(String(s.month).padStart(2,'0')+'-'+String(s.day).padStart(2,'0')):'—');
+  }
+  return `<b>农历 ${l.monthCn}${l.dayCn}</b><br>
+    <span style="color:var(--dim)">${now}/${now+1}/${now+2} 年发送：<br>
+    ${pre.join(' · ')}</span>`;
+}
+
 function drawRoster(){
   const tb=document.querySelector('#rt tbody');
   tb.innerHTML=rosterRows.map((r,i)=>`<tr>
-    <td><input value="${esc(r[0])}" data-i="${i}" data-f="0"></td>
-    <td><input value="${esc(r[1])}" data-i="${i}" data-f="1" placeholder="03-14"></td>
+    <td><input value="${esc(r[0])}" data-i="${i}" data-f="0" placeholder="姓名"></td>
+    <td><input type="date" value="${r[1]&&parseDate(r[1])?fmt(parseDate(r[1])):''}"
+         data-i="${i}" data-f="1"></td>
     <td><select data-i="${i}" data-f="2">
-      <option${r[2]!=='农历'?' selected':''}>公历</option>
-      <option${r[2]==='农历'?' selected':''}>农历</option></select></td>
-    <td><input value="${esc(r[3])}" data-i="${i}" data-f="3" placeholder="爱打篮球，晚自习后还要去投几个"></td>
+      <option value="公历"${r[2]!=='农历'?' selected':''}>公历</option>
+      <option value="农历"${r[2]==='农历'?' selected':''}>农历</option></select></td>
+    <td><select data-i="${i}" data-f="3">
+      <option value=""${r[3]!=='男'&&r[3]!=='女'?' selected':''}>未填</option>
+      <option value="男"${r[3]==='男'?' selected':''}>男</option>
+      <option value="女"${r[3]==='女'?' selected':''}>女</option></select></td>
+    <td style="font-size:12px;line-height:1.5" id="calc${i}">${calcRow(r)}</td>
+    <td><input value="${esc(r[4])}" data-i="${i}" data-f="4" placeholder="爱打篮球，晚自习后还要去投几个"></td>
     <td><button class="gh sm" onclick="delRow(${i})">×</button></td></tr>`).join('');
+
   tb.querySelectorAll('input,select').forEach(el=>{
-    el.onchange=e=>{rosterRows[+e.target.dataset.i][+e.target.dataset.f]=e.target.value}});
+    el.onchange=e=>{
+      const i=+e.target.dataset.i,f=+e.target.dataset.f;
+      let v=e.target.value;
+      if(f===1&&v){
+        const p=parseDate(v); if(p) v=fmt(p);
+      }
+      rosterRows[i][f]=v;
+      if(f===1||f===2){
+        const c=document.getElementById('calc'+i);
+        if(c)c.innerHTML=calcRow(rosterRows[i]);
+      }
+      updStat();
+    };
+  });
+  updStat();
 }
+function fmt(p){return p[0]+'-'+String(p[1]).padStart(2,'0')+'-'+String(p[2]).padStart(2,'0');}
 function esc(s){return String(s).replace(/"/g,'&quot;')}
-function addRow(){rosterRows.push(['','','公历','']);drawRoster()}
+function addRow(){
+  const dy=document.getElementById('defYear')?.value;
+  rosterRows.push(['', dy?dy+'-01-01':'', '公历', '', '']);
+  drawRoster();
+}
 function delRow(i){rosterRows.splice(i,1);drawRoster()}
+
+function updStat(){
+  const el=document.getElementById('rst');
+  if(!el)return;
+  let noDate=0,lunar=0,noGender=0,bad=0,noYear=0;
+  rosterRows.forEach(r=>{
+    if(!parseDate(r[1])){
+      noDate++;
+      if(r[2]==='农历')noYear++;
+    }
+    if(r[2]==='农历')lunar++;
+    if(r[3]!=='男'&&r[3]!=='女')noGender++;
+    if(parseDate(r[1])&&r[2]==='农历'){
+      const p=parseDate(r[1]);
+      if(solar2lunar(p[0],p[1],p[2])===-1)bad++;
+    }
+  });
+  const parts=[];
+  if(noDate)parts.push(`<span style="color:var(--warn)">${noDate} 人没填出生日期</span>`);
+  if(lunar)parts.push(`过农历 ${lunar} 人`);
+  if(noGender)parts.push(`性别未填 ${noGender} 人（留空则不用他/她）`);
+  if(bad)parts.push(`<span style="color:var(--err)">${bad} 人换算失败</span>`);
+  if(noYear)parts.push(`<span style="color:var(--err)">${noYear} 人过农历但出生日期缺年份，必须补全</span>`);
+  el.innerHTML=parts.length?parts.join(' ｜ '):
+    `<span style="color:var(--ok)">✓ ${rosterRows.length} 人信息完整</span>`;
+}
+
 async function saveRoster(){
-  const bad=rosterRows.filter(r=>!r[0]||!r[1]);
-  if(bad.length){toast('有行没填姓名或生日');return}
+  const bad=rosterRows.filter(r=>!r[0]||!parseDate(r[1]));
+  if(bad.length){toast(`有 ${bad.length} 行没填姓名或出生日期`);return}
   await putFile('data/birthdays.csv',toCSV(rosterRows),'更新班级名单');
   toast('名单已保存 ✓');
+  setTimeout(render,800);
 }
 
 /* ---------- 贺卡 ---------- */
